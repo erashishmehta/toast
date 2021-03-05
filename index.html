@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+    <div id="notification-container"></div>
+    <script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"></script>
+    <script>
+        (function ($){
+            var _this = null;
+            var toasts = [];
+
+
+
+            var defaults = {
+                'submit_callback': null,
+                'close_callback': null,
+                'select_toast': null,
+                'autoclose': 5000,
+            };
+
+            var getToast = function(id){
+                return toasts.find(x => x.id == id);
+            }
+
+
+            var init = function(opts){
+                this.options = $.extend({}, defaults, opts);
+
+                $(this.element).on("click", ".toast-close", function(e){
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var id = $(this).closest(".toast").attr("id");
+                    if(!!id){
+                        removeToast(id.slice(5));
+                    }    
+                });
+                $(this.element).on("click", ".toast", function(e){
+                    var id = $(this).attr("id").slice(5);
+                    var toastObj = getToast(id);
+                    if(!!_this.options.select_toast){
+                        _this.options.select_toast(toastObj.message);
+                    }
+                    if(!!id){
+                        removeToast(id);
+                    } 
+                })
+
+            }
+
+            var createTemplate = function(id, title, description){
+                var toast = '<div class="toast" id="toast' + id +'">' +
+                                '<span class="toast-close">X</span>' +
+                                '<h3>' + title +'</h3>'+
+                                '<div>' + description +'</div>'+
+                            '</div>';
+
+                return toast;
+            }
+
+
+            var removeToast = function(id){
+                $("#toast" + id).remove();
+                var toastObj = getToast(id);
+                resetTimeout(toastObj);
+                if(!!_this.options.close_callback){
+                    _this.options.close_callback(toastObj.message);
+                }
+                removeTaostFromArray(id);
+
+            }
+
+            var resetTimeout = function(toast){
+                if(!!toast && !!toast.timeout){
+                    clearTimeout(toast.timeout);
+                }
+            }
+
+            var removeTaostFromArray = function(id){
+                toasts = toasts.filter(function( obj ) {
+                    return obj.id !== id;
+                });
+            }
+
+
+            function getRandomInt(max) {
+               return Math.floor(Math.random() * Math.floor(max));
+            }
+
+            var addMessage = function(message){
+                var id = getRandomInt(1000);
+                var obj = {
+                    'id' : id
+                };
+                
+                var timeout = setTimeout(function(a){
+                    removeToast(a);
+                }, this.options.autoclose, id);
+
+                obj["timeout"] = timeout;
+                obj["message"] = message;
+
+                toasts.push(obj);
+                this.element.append(createTemplate(id, message.title, message.description));
+                bindEvent();
+            }
+
+            var notification = function(element, options){
+                _this = this;
+                this.element = $(element);
+                init.apply(this, [options]);
+            }
+
+            notification.prototype = {
+                "addMessage": addMessage
+            }
+
+
+            $.fn.notification = function(options) {
+                var $this = $(this);
+                var plugin = $this.data('notification');
+                if(!plugin){
+                    plugin = new notification(this, options);
+                    $this.data("notification", plugin);
+                } else {
+                    init.apply(this, [options]);
+                }
+                return $this.data('notification');
+            };
+        })(jQuery);
+
+    </script>
+    <script>
+        var notification = $("#notification-container").notification({
+            "submit_callback": function(message){console.log("submitted", message)},
+            "close_callback": function(message){console.log("close pop", message)},
+            "select_toast": function(message){console.log("select toast", message)}
+        });
+        
+        notification.addMessage({
+            "title": "Helllo",
+            "description": "description",
+            "senderId": 123,
+            "isGroup": true,
+            "onSamechat": true,
+            "type": "form"
+        })
+    </script>
+</body>
+</html>
